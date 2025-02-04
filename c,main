@@ -1,0 +1,92 @@
+#include "pico/stdlib.h"
+#include "hardware/timers.h"
+
+// Definindo pinos
+#define LED_AZUL 15
+#define LED_VERMELHO 16
+#define LED_VERDE 17
+#define BOTAO 14
+
+// Variáveis para controle de estados
+volatile bool botao_pressionado = false;
+
+// Função de controle do botão
+void button_callback(uint gpio, uint32_t events) {
+    botao_pressionado = true;
+}
+
+// Função que desliga os LEDs
+void desligar_leds() {
+    gpio_put(LED_AZUL, 0);
+    gpio_put(LED_VERMELHO, 0);
+    gpio_put(LED_VERDE, 0);
+}
+
+// Função que liga todos os LEDs
+void ligar_todos_leds() {
+    gpio_put(LED_AZUL, 1);
+    gpio_put(LED_VERMELHO, 1);
+    gpio_put(LED_VERDE, 1);
+}
+
+// Função que altera o estado dos LEDs (dois ligados, depois um)
+void altera_estado_leds(uint alarm_id) {
+    static int estado = 0;
+
+    // Caso 0: Todos os LEDs acesos
+    if (estado == 0) {
+        gpio_put(LED_AZUL, 1);
+        gpio_put(LED_VERMELHO, 1);
+        gpio_put(LED_VERDE, 1);
+        estado = 1;
+    }
+    // Caso 1: Dois LEDs acesos
+    else if (estado == 1) {
+        gpio_put(LED_AZUL, 0); // Apaga o LED Azul
+        estado = 2;
+    }
+    // Caso 2: Um LED aceso
+    else if (estado == 2) {
+        gpio_put(LED_VERMELHO, 0); // Apaga o LED Vermelho
+        estado = 3;
+    }
+    // Caso 3: Todos os LEDs apagados
+    else if (estado == 3) {
+        desligar_leds();
+        estado = 0; // Reseta para o estado inicial
+    }
+
+    // Proxima alteração após 1 segundo (1000 ms)
+    add_alarm_in_ms(1000, altera_estado_leds, 0, true);
+}
+
+int main() {
+    // Inicializa o GPIO
+    gpio_init(LED_AZUL);
+    gpio_set_dir(LED_AZUL, GPIO_OUT);
+    gpio_init(LED_VERMELHO);
+    gpio_set_dir(LED_VERMELHO, GPIO_OUT);
+    gpio_init(LED_VERDE);
+    gpio_set_dir(LED_VERDE, GPIO_OUT);
+    gpio_init(BOTAO);
+    gpio_set_dir(BOTAO, GPIO_IN);
+    gpio_pull_down(BOTAO);
+
+    // Configura interrupção para o botão
+    gpio_set_irq_enabled_with_callback(BOTAO, GPIO_IRQ_EDGE_FALL, true, &button_callback);
+
+    // Inicializa o temporizador
+    stdio_init_all();
+
+    // Loop principal
+    while (1) {
+        if (botao_pressionado) {
+            botao_pressionado = false;
+            ligar_todos_leds(); // Liga todos os LEDs ao pressionar o botão
+            altera_estado_leds(0); // Começa a sequência de desligamento
+        }
+        tight_loop_contents(); // Aguarda interrupção
+    }
+
+    return 0;
+}
