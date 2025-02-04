@@ -1,0 +1,11 @@
+# Ignorar arquivos de build
+/build/
+
+# Ignorar arquivos temporários do VSCode
+.vscode/
+
+# Ignorar arquivos de compilação
+*.o
+*.uf2
+*.elf
+*.bin
