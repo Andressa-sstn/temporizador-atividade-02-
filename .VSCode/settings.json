@@ -1,0 +1,106 @@
+/// Arquivo CMakeLists.txt
+cmake_minimum_required(VERSION 3.13)
+include(pico_sdk_import.cmake)
+
+project(led-button-timer-rpi-pico C CXX ASM)
+set(CMAKE_C_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
+
+pico_sdk_init()
+
+add_executable(main main.c)
+
+target_link_libraries(main pico_stdlib hardware_timer)
+
+pico_add_extra_outputs(main)
+
+/// Arquivo pico_sdk_import.cmake
+include($ENV{PICO_SDK_PATH}/pico_sdk_init.cmake)
+
+/// Arquivo wokwi.toml
+[
+  "Pico", 
+  { "led_blue": 15, "led_red": 16, "led_green": 17, "button": 14 }
+]
+
+/// Arquivo .vscode/settings.json
+{
+    "C_Cpp.default.compilerPath": "/usr/bin/arm-none-eabi-gcc",
+    "cmake.configureOnOpen": true
+}
+
+/// Arquivo .vscode/launch.json
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Launch",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/main.elf",
+            "cwd": "${workspaceFolder}",
+            "MIMode": "gdb",
+            "miDebuggerPath": "/usr/bin/arm-none-eabi-gdb"
+        }
+    ]
+}
+
+// main.c - Código principal do projeto
+#include "pico/stdlib.h"
+#include "hardware/timer.h"
+
+// Definição dos pinos dos LEDs e do botão
+#define LED_AZUL 15
+#define LED_VERMELHO 16
+#define LED_VERDE 17
+#define BOTAO 14
+
+volatile bool botao_pressionado = false;
+
+void button_callback(uint gpio, uint32_t events) {
+    botao_pressionado = true;
+}
+
+void altera_estado_leds(uint alarm_id, void *user_data) {
+    static int estado = 0;
+    if (estado == 0) {
+        gpio_put(LED_AZUL, 1);
+        gpio_put(LED_VERMELHO, 1);
+        gpio_put(LED_VERDE, 1);
+        estado = 1;
+        add_alarm_in_ms(1000, altera_estado_leds, NULL, false);
+    } else if (estado == 1) {
+        gpio_put(LED_AZUL, 0);
+        estado = 2;
+        add_alarm_in_ms(1000, altera_estado_leds, NULL, false);
+    } else if (estado == 2) {
+        gpio_put(LED_VERMELHO, 0);
+        estado = 3;
+        add_alarm_in_ms(1000, altera_estado_leds, NULL, false);
+    } else if (estado == 3) {
+        gpio_put(LED_VERDE, 0);
+        estado = 0;
+    }
+}
+
+int main() {
+    stdio_init_all();
+    gpio_init(LED_AZUL);
+    gpio_set_dir(LED_AZUL, GPIO_OUT);
+    gpio_init(LED_VERMELHO);
+    gpio_set_dir(LED_VERMELHO, GPIO_OUT);
+    gpio_init(LED_VERDE);
+    gpio_set_dir(LED_VERDE, GPIO_OUT);
+    gpio_init(BOTAO);
+    gpio_set_dir(BOTAO, GPIO_IN);
+    gpio_pull_down(BOTAO);
+    gpio_set_irq_enabled_with_callback(BOTAO, GPIO_IRQ_EDGE_FALL, true, &button_callback);
+
+    while (1) {
+        if (botao_pressionado) {
+            botao_pressionado = false;
+            altera_estado_leds(0, NULL);
+        }
+        tight_loop_contents();
+    }
+}
