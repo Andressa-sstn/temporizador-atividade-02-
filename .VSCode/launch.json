@@ -1,0 +1,42 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Pico Debug",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/main.elf",
+            "cwd": "${workspaceFolder}",
+            "MIMode": "gdb",
+            "miDebuggerPath": "/usr/bin/arm-none-eabi-gdb",
+            "setupCommands": [
+                {
+                    "text": "-enable-pretty-printing",
+                    "description": "Enable GDB pretty printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "text": "target remote localhost:3333",
+                    "description": "Connect to OpenOCD",
+                    "ignoreFailures": false
+                },
+                {
+                    "text": "monitor reset init",
+                    "description": "Reset the board before starting debug",
+                    "ignoreFailures": false
+                },
+                {
+                    "text": "load",
+                    "description": "Load program to board",
+                    "ignoreFailures": false
+                }
+            ],
+            "externalConsole": true,
+            "logging": {
+                "trace": true,
+                "traceResponse": true,
+                "engineLogging": true
+            }
+        }
+    ]
+}
